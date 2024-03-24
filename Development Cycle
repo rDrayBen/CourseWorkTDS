@@ -15,3 +15,6 @@ Denys: ask Andriy for his coursework
 Знайти фільтри і прогнати картинку послідовно через них. 
 Діма проганяє повністю послідовно(sequential parallel).
 Денис пробує розділити на різні фільтри незалежно і потім об'єднати результат(full parallel).
+
+#Tasks week 4
+Денис full parallel структура
