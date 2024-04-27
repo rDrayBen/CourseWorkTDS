@@ -1,0 +1,190 @@
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <thread>
+
+cv::Mat applyMedian(const cv::Mat& inputImage, int kernelSize) {
+    cv::Mat outputImage;
+    cv::medianBlur(inputImage, outputImage, kernelSize);
+    return outputImage;
+}
+
+cv::Mat applyGrayScale(const cv::Mat& image) {
+    cv::Mat processedImage;
+    cv::cvtColor(image, processedImage, cv::COLOR_BGR2GRAY);
+    return processedImage;
+}
+
+cv::Mat readImage(const std::string& path) {
+    cv::Mat image = cv::imread(path);
+    if (image.empty()) {
+        std::cerr << "Could not open or find the image" << std::endl;
+        exit(-1);
+    }
+    return image;
+}
+
+cv::Mat applyGaussian(const cv::Mat& inputImage, int kernelSize, double sigma) {
+    cv::Mat outputImage;
+    cv::GaussianBlur(inputImage, outputImage, cv::Size(kernelSize, kernelSize), sigma);
+    return outputImage;
+}
+
+cv::Mat applySharpening(const cv::Mat& image, const cv::Mat& sharpeningKernel) {
+    cv::Mat result;
+    cv::filter2D(image, result, image.depth(), sharpeningKernel);
+    return result;
+}
+
+cv::Mat applyUnsharpMasking(const cv::Mat& inputImage, double sigma, double alpha) {
+    cv::Mat blurred;
+    cv::GaussianBlur(inputImage, blurred, cv::Size(0, 0), sigma, sigma);
+    cv::Mat sharpened = inputImage + alpha * (inputImage - blurred);
+    return sharpened;
+}
+
+cv::Mat combineImages(const cv::Mat& image1, const cv::Mat& image2, double w1, double w2) {
+    cv::Mat result;
+    cv::addWeighted(image1, w1, image2, w2, 0, result);
+    return result;
+}
+
+
+void displayImage(const cv::Mat& image, std::string name) {
+    cv::imshow(name, image);
+    cv::waitKey(0);
+}
+
+void saveImage(const cv::Mat& image, const std::string& path) {
+    cv::imwrite(path, image);
+}
+
+cv::Mat upscaleImage(const cv::Mat& image, cv::Size sz, double scaleFactor, int interpolation) {
+    cv::Mat result;
+    cv::resize(image, result, sz, scaleFactor, scaleFactor, interpolation);
+    return result;
+}
+
+cv::Mat applyDetailEnhance(const cv::Mat& image, float sigmaS, float sigmaR) {
+    cv::Mat result;
+    cv::detailEnhance(image, result, sigmaS, sigmaR);
+    return result;
+}
+
+cv::Mat weightedSumN(const std::vector<cv::Mat>& images, const std::vector<double>& weights) {
+    // No checks for compatability for perfomance improvement
+    cv::Mat accumulator = cv::Mat::zeros(images[0].size(), images[0].type());
+
+    // std::cout << images[0].size().height << " " << images[0].size().width << " " << images[0].size().area() <<  "\n";
+
+    for (size_t i = 0; i < images.size(); ++i) {
+        cv::addWeighted(accumulator, 1.0, images[i], weights[i], 0.0, accumulator);
+    }
+
+    return accumulator;
+}
+
+int main() {
+    int imageI = 2;
+    std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/" + std::to_string(imageI) + ".jpg";
+    std::string savePath = "D:/T/6_term/TDS/ImageQualityImprovement/parallelTaskImprovedImages/" + std::to_string(imageI) + ".jpg";
+    std::string savePathOrig = "D:/T/6_term/TDS/ImageQualityImprovement/parallelTaskImprovedImages/" + std::to_string(imageI) + "orig.jpg";
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    long long timeReadingImages = 0;
+    long long timeCombiningImages = 0;
+    long long timeThreads = 0;
+    long long timeThreads1 = 0;
+    long long timeThreads2 = 0;
+    long long timeThreads3 = 0;
+    long long timeWritingImages = 0;
+
+    auto measureExecutionTime = [&](auto func) {
+        auto start = std::chrono::high_resolution_clock::now();
+        func();
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    };
+
+    for (int i = 1; i < 10; i++) {
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+
+        auto origImage = readImage(imagePath);
+
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        timeReadingImages += std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+        // displayImage(origImage, "origImage");
+
+        //auto upscaled = upscaleImage(origImage, cv::Size(), 2, cv::INTER_LINEAR);
+        //displayImage(upscaled, "upscaled");
+
+        cv::Mat gaussianBlurImage, unsharpMaskedImage, detailEnhancedImage;
+
+        std::thread threadGaussian([&]() {
+            long long duration = measureExecutionTime([&]() {
+                gaussianBlurImage = applyGaussian(origImage, 7, 0);
+                });
+            timeThreads1 += duration;
+        });
+
+        std::thread threadUnsharp([&]() {
+            long long duration = measureExecutionTime([&]() {
+                auto sharpenedImage = applySharpening(origImage, (cv::Mat_<double>(3, 3) <<
+                    -1, -1, -1,
+                    -1, 9, -1,
+                    -1, -1, -1));
+                unsharpMaskedImage = applyUnsharpMasking(sharpenedImage, 1.0, 0.5);
+                });
+            timeThreads2 += duration;
+        });
+
+        std::thread threadDetail([&]() {
+            long long duration = measureExecutionTime([&]() {
+                detailEnhancedImage = applyDetailEnhance(origImage, 10, 0.15);
+                });
+            timeThreads3 += duration;
+        });
+
+        threadGaussian.join();
+        threadUnsharp.join();
+        threadDetail.join();
+
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        timeThreads += std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
+
+        auto res = weightedSumN({ gaussianBlurImage , unsharpMaskedImage, detailEnhancedImage }, { 1.f / 3.f, 1.f / 3.f, 1.f / 3.f });
+
+        auto t4 = std::chrono::high_resolution_clock::now();
+
+        timeCombiningImages += std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count();
+
+        // displayImage(res, "improved");
+
+        cv::imwrite(savePathOrig, origImage);
+
+        auto t5 = std::chrono::high_resolution_clock::now();
+
+        timeWritingImages += std::chrono::duration_cast<std::chrono::milliseconds>(t5 - t4).count();
+
+        // cv::imwrite(savePath, res);
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    std::cout << "programm spend " << duration << " ms\n";
+    std::cout << "On reading images: " << timeReadingImages << " ms\n";
+    std::cout << "On threading images: " << timeThreads << " ms\n";
+    std::cout << "On applyGaussian images: " << timeThreads1 << " ms\n";
+    std::cout << "On applyUnsharpMasking images: " << timeThreads2 << " ms\n";
+    std::cout << "On applyDetailEnhance images: " << timeThreads3 << " ms\n";
+    std::cout << "On combining images: " << timeCombiningImages << " ms\n";
+    std::cout << "On writing images: " << timeWritingImages << " ms\n";
+
+    return 0;
+}
+
