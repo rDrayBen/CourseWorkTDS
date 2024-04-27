@@ -5,8 +5,8 @@
 Методики покращення зображень, які були використані:
 1. Median Filter
 2. Mean Filter
-3. Unsharpmask
-4. Gaussian Filter
+3. Gaussian Filter
+4. Unsharpmask
 
 Коефіцієнти: { 0.4, 0.1, 0.4, 0.1 }; (Можуть мінятися).
 
