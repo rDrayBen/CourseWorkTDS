@@ -238,7 +238,7 @@ int main() {
         std::thread threadMedian([&]() { medianFiltered = applyMedianFilter(imageToImprove, 5); });
         std::thread threadMean([&]() { meanFiltered = applyMeanFilter(imageToImprove, 7); });
         std::thread threadUnsharpMask([&]() { unsharpMaskFiltered = applyUnsharpMask(imageToImprove, 3); });
-        std::thread threadGaussian([&]() { gaussianFiltered = applyGaussianBlur(imageToImprove, 3, 0); });
+        std::thread threadGaussian([&]() { gaussianFiltered = applyGaussianBlur(imageToImprove, 3, 10); });
 
         threadMedian.join();
         threadMean.join();
