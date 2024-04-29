@@ -236,9 +236,9 @@ int main() {
         cv::Mat medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered;
 
         std::thread threadMedian([&]() { medianFiltered = applyMedianFilter(imageToImprove, 5); });
-        std::thread threadMean([&]() { meanFiltered = applyMeanFilter(imageToImprove, 7); });
-        std::thread threadUnsharpMask([&]() { unsharpMaskFiltered = applyUnsharpMask(imageToImprove, 3); });
-        std::thread threadGaussian([&]() { gaussianFiltered = applyGaussianBlur(imageToImprove, 3, 10); });
+        std::thread threadMean([&]() { meanFiltered = applyMeanFilter(imageToImprove, 5); });
+        std::thread threadUnsharpMask([&]() { unsharpMaskFiltered = applyUnsharpMask(imageToImprove, 5); });
+        std::thread threadGaussian([&]() { gaussianFiltered = applyGaussianBlur(imageToImprove, 5, 10); });
 
         threadMedian.join();
         threadMean.join();
