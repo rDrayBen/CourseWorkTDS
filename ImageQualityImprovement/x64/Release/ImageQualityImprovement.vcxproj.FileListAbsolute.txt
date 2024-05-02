@@ -1,2 +1,0 @@
-D:\T\6_term\TDS\ImageQualityImprovement\x64\Release\ImageQualityImprovement.exe
-D:\T\6_term\TDS\FoundationForParallel\x64\Release\ImageQualityImprovement.exe
