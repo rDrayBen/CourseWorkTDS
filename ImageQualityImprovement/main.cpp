@@ -1,4 +1,4 @@
-﻿#include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <thread>
 #include <omp.h>
 #include <chrono>
@@ -50,7 +50,7 @@ cv::Mat applyGaussianBlur(const cv::Mat& src, int kernelSize, double sigma) {
     return result;
 }
 
-cv::Mat combineImages(int threads, const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& img3, const cv::Mat& img4, const std::vector<double>& weights) {
+cv::Mat combineImages(const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& img3, const cv::Mat& img4, const std::vector<double>& weights) {
     cv::Mat combinedImage;
     trackTime([&]() {
         int rows = img1.rows;
@@ -185,14 +185,40 @@ void showImage(const char* windowName, cv::Mat& img) {
         cv::imshow(windowName, img);
 }
 
+bool firstTime = true;
+
+void printResults(const cv::Mat& orig, const cv::Mat& noised, const cv::Mat& result, std::vector<std::string> filterNames) {
+    
+    if (firstTime) {
+        std::cout << "\n";
+        std::cout << "Metrics for original and noised image. MSE: " << MSE(orig, noised);
+        std::cout << " PSNR: " << PSNR(orig, noised) << " SSIM: " << SSIM(orig, noised) << "\n";
+
+        firstTime = false;
+    }
+
+    int sizeNeed = 39;
+    int curr = 0;
+
+    for (auto str : filterNames) {std::cout << str << " ";curr += str.size() + 1;}
+
+    while (curr < sizeNeed) {std::cout << " ";curr++;}
+
+    std::cout << "MSE: " << MSE(orig, result) << " PSNR: " << PSNR(orig, result) << " SSIM: " << SSIM(orig, result) << "\n";
+    //std::cout <<MSE(orig, result) << "\n";
+    //std::cout <<PSNR(orig, result) << "\n";
+    //std::cout <<SSIM(orig, result) << "\n";
+}
+
 int main() {
+    std::cout << "1\n2\n3\n";
     int imageI = 6;
     int width = 400;
     int height = 400;
     int threads = 1;
     omp_set_num_threads(threads); // it works 
     printImages = false;
-    bool printMetrics = false;
+    bool printMetrics = true;
 
     const char* original = "original";
     const char* gausianNoiseWindow = "gausianNoise";
@@ -201,7 +227,7 @@ int main() {
     //std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/" + std::to_string(imageI) + ".jpg";
     //std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/good" + std::to_string(imageI) + ".jpg";
     //std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/dataset/image_" + std::to_string(imageI) + ".jpg";
-    std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/dataset/medium.jpg";
+    std::string imagePath = "D:/T/6_term/TDS/ImageQualityImprovement/images/dataset/big.jpg";
 
     cv::Mat originalImage = cv::imread(imagePath, cv::IMREAD_COLOR);
     std::cout << SSIM(originalImage, originalImage) << "\n\n"; // FOR ANNOING LOG WARNING
@@ -236,8 +262,20 @@ int main() {
 
     std::cout << std::fixed << std::setprecision(3);
     
+    cv::Mat onlyMedian, onlyMean, onlyUnsharpMask, onlyGaussian;
 
-    int times = 100;
+    cv::Mat medianMean, medianUnsharpMask, medianGaussian;
+    cv::Mat meanUnsharpMask, meanGaussian;
+    cv::Mat unsharpMaskGaussian;
+
+    cv::Mat meanUnsharpMaskGaussian;
+    cv::Mat medianUnsharpMaskGaussian;
+    cv::Mat medianMeanGaussian;
+    cv::Mat medianMeanUnsharpMask;
+
+
+
+    int times = 1;
     for (int iteration = 1; iteration <= times; ++iteration) {
         auto startProgram = std::chrono::high_resolution_clock::now();
         cv::Mat medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered;
@@ -255,7 +293,44 @@ int main() {
         auto threadsEnd = std::chrono::high_resolution_clock::now();
 
         std::vector<double> weights = { 0.4, 0.1, 0.4, 0.1 };
-        cv::Mat combinedImage = combineImages(threads, medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, weights);
+        cv::Mat combinedImage = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, weights);
+
+        onlyMedian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 1, 0, 0, 0 });
+        onlyMean = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0, 1, 0, 0 });
+        onlyUnsharpMask = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0, 0, 1, 0 });
+        onlyGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0, 0, 0, 1 });
+
+        medianMean = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.5, 0.5, 0, 0 });
+        medianUnsharpMask = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.5, 0, 0.5, 0 });
+        medianGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.5, 0, 0, 0.5 });
+        meanUnsharpMask = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, {0, 0.5, 0.5, 0 });
+        meanGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, {0, 0.5, 0, 0.5 });
+        unsharpMaskGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, {0, 0, 0.5, 0.5 });
+
+        meanUnsharpMaskGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0, 0.33, 0.33, 0.34 });
+        medianUnsharpMaskGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.33, 0, 0.33,  0.34 });
+        medianMeanGaussian = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.33, 0.33, 0,  0.34 });
+        medianMeanUnsharpMask = combineImages(medianFiltered, meanFiltered, unsharpMaskFiltered, gaussianFiltered, { 0.33, 0.33,  0.34, 0 });
+
+        printResults(originalImage, gausianNoise, onlyMedian, { "Median" });
+        printResults(originalImage, gausianNoise, onlyMean, { "Mean" });
+        printResults(originalImage, gausianNoise, onlyGaussian, { "Gaussian" });
+        printResults(originalImage, gausianNoise, onlyUnsharpMask, { "UnsharpMask" });
+
+        printResults(originalImage, gausianNoise, medianMean, { "Median", "Mean"});
+        printResults(originalImage, gausianNoise, medianGaussian, { "Median", "Gaussian" });
+        printResults(originalImage, gausianNoise, medianUnsharpMask, { "Median", "UnsharpMask"});
+        printResults(originalImage, gausianNoise, meanGaussian, { "Mean", "Gaussian" });
+        printResults(originalImage, gausianNoise, meanUnsharpMask, { "Mean", "UnsharpMask"});
+        printResults(originalImage, gausianNoise, unsharpMaskGaussian, { "Gaussian", "UnsharpMask"});
+
+
+        printResults(originalImage, gausianNoise, meanUnsharpMaskGaussian, { "Mean", "UnsharpMask", "Gaussian"});
+        printResults(originalImage, gausianNoise, medianUnsharpMaskGaussian, { "Median", "UnsharpMask", "Gaussian"});
+        printResults(originalImage, gausianNoise, medianMeanGaussian, { "Median", "Mean", "Gaussian"});
+        printResults(originalImage, gausianNoise, medianMeanUnsharpMask, { "Median", "Mean", "UnsharpMask" });
+
+        printResults(originalImage, gausianNoise, combinedImage, { "Median", "Mean", "Gaussian", "UnsharpMask" });
         
         showImage(result, combinedImage);
 
