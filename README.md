@@ -10,8 +10,6 @@
 
 Коефіцієнти: { 0.4, 0.1, 0.4, 0.1 }; (Можуть мінятися).
 
-Report file
-https://docs.google.com/document/d/1x7wE2nTvBCIIvFhQOYyrw_O6i7Nz8wK1/edit?usp=sharing&ouid=111441053122233073635&rtpof=true&sd=true
+[Report file](https://docs.google.com/document/d/1x7wE2nTvBCIIvFhQOYyrw_O6i7Nz8wK1/edit?usp=sharing&ouid=111441053122233073635&rtpof=true&sd=true)
 
-Dataset (на гітхабі тільки перших 15 картинок бо більше ніж 100 файлів не дає разом загрузити)
-https://www.kaggle.com/datasets/ahmadahmadzada/images2000
+[Dataset](https://www.kaggle.com/datasets/ahmadahmadzada/images2000) (на гітхабі тільки перших 15 картинок бо більше ніж 100 файлів не дає разом загрузити)
